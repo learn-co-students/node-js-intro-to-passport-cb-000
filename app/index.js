@@ -14,11 +14,11 @@ const db = knex(config[ENV]);
 
 // Initialize Express.
 const app = express();
-app.user(flash());
-app.user(bodyParser.urlencoded({extended: true}));
+app.use(flash());
+app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
-app.user(session({secret: 'our secret string'}));
-app.user(cookieParser());
+app.use(session({secret: 'our secret string'}));
+app.use(cookieParser());
 app.use(passport.initialize());
 
 // Configure handlebars templates.
