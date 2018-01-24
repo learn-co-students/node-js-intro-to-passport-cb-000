@@ -4,15 +4,30 @@ const bodyParser = require('body-parser');
 const express = require('express');
 const knex = require('knex');
 const handlebars = require('express-handlebars');
-
+const passport = require('passport');
+const session = require('express-session');
+const cookieParser = require('cookie-parser');
+const flash = require('connect-flash');
 const ENV = process.env.NODE_ENV || 'development';
 const config = require('../knexfile');
 const db = knex(config[ENV]);
-
+const LocalStrategy = require('passport-local').Strategy;
 // Initialize Express.
 const app = express();
+app.use(flash());
+app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
+app.use(session({secret: 'our secret string'}));
+app.use(cookieParser());
 app.use(passport.initialize());
+app.use((req, res, done) => {
+	if (req.session && req.session.passport) {
+		console.log('user is logged in: ', req.session.passport);
+	}
+	else {
+		console.log('user not logged in');
+	}
+})
 
 // Configure handlebars templates.
 app.engine('handlebars', handlebars({
@@ -31,8 +46,49 @@ const Comment = require('./models/comment');
 const Post = require('./models/post');
 const User = require('./models/user');
 
+// ***** Auth ***** //
+passport.use(new LocalStrategy((username, password, done) => {
+	User
+		.forge({username: username})
+		.fetch()
+		.then((usr) => {
+			if(!usr) {
+				return done(null, false);
+			}
+			usr.validatePassword(password).then((valid) => {
+				if(!valid) {
+					return done(null, false);
+				}
+				return done(null, urs);
+			});
+		})
+		.catch((err) => {
+			return done(err);
+		});
+}));
 
+passport.serializeUser(function(user, done){
+	done(null, user.id);
+});
 
+passport.deserializeUser(function(user, done){
+	User
+		.forge({id: user})
+		.fetch()
+		.then((usr) => {
+			done(null, usr);
+		})
+		.catch((err) => {
+			done(err);
+		});
+});
+
+const isAuthenticated = (req, res, done) => {
+  if (req.isAuthenticated()) {
+    return done();
+  }
+  res.redirect('/login');
+};
 
 
 // ***** Server ***** //
@@ -67,7 +123,7 @@ app.post('/user', (req, res) => {
     });
 });
 
-app.get('/posts', (req, res) => {
+app.get('/posts', isAuthenticated, (req, res) => {
   Post
     .collection()
     .fetch()
@@ -123,6 +179,19 @@ app.post('/comment', (req, res) => {
       res.sendStatus(500);
     });
 });
+
+app.get('/login', (req, res) => {
+	res.render('login', {message: req.flash('error')})
+});
+
+app.post('/login',
+	passport.authenticate('local', {
+		failureRedirect: '/login',
+		failureFlash: true
+	}),
+	function(req,res){
+		res.redirect('/posts');
+	});
 
 // Exports for Server Hoisting.
 
