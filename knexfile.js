@@ -4,9 +4,7 @@ module.exports = {
 
   testing: {
     client: 'postgresql',
-    connection: {
-      database: 'learnco_blog_test'
-    },
+    connection: 'postgres://dapawn:password@learnco_blog',
     pool: {
       min:2,
       max: 10
@@ -18,9 +16,7 @@ module.exports = {
 
   development: {
     client: 'postgresql',
-    connection: {
-      database: 'learnco_blog',
-    },
+    connection: 'postgres://dapawn:password@learnco_blog',
     pool: {
       min: 2,
       max: 10
